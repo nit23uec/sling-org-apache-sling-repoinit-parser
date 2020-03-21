@@ -105,8 +105,11 @@ TOKEN:
 |   < NAMESPACED_ITEM: (["a"-"z"] | ["A"-"Z"])+ ":" (["a"-"z"] | ["A"-"Z"])+ >
 |   < PATH_STRING: "/" (["a"-"z"] | ["A"-"Z"] | ["0"-"9"] | ["-"] | ["_"] | ["."] | ["@"] | [":"] | ["+"] | ["/"]) * >
 |   < PATH_REPOSITORY: ":repository" >
-|   < STRING: (["a"-"z"] | ["A"-"Z"] | ["0"-"9"] | ["-"] | ["_"] | ["."] | ["/"] | [":"] | ["*"]) + >
+|   < LONG_STRING: (["0"-"9"]) + >
+|   < DOUBLE_STRING: (["0"-"9"]) + ["."] (["0"-"9"]) + >
+|   < BOOLEAN_STRING: ("true" | "false") >
 |   < DATE_STRING: ("+" | "-")? ["0"-"9"]["0"-"9"]["0"-"9"]["0"-"9"] ["-"] ((["0"]["1"-"9"]) | (["1"]["0"-"2"])) ["-"] (["0"]["1"-"9"] | (["1"]|["2"])["0"-"9"] | ["3"](["0"] | ["1"])) ["T"] (["0"]["0"-"9"] | ["1"]["0"-"9"] | ["2"]["0"-"3"]) [":"] (["0"-"5"]["0"-"9"]) [":"] (["0"-"5"]["0"-"9"]) ["."] ["0"-"9"]["0"-"9"]["0"-"9"] (["Z"]| ((["+"]|["-"])(["0"]["0"-"9"] | ["1"]["0"-"9"] | ["2"]["0"-"3"]) [":"] (["0"-"5"]["0"-"9"]))) >
+|   < STRING: (["a"-"z"] | ["A"-"Z"] | ["0"-"9"] | ["-"] | ["_"] | ["."] | ["/"] | [":"] | ["*"]) + >
 |   < EOL: "\n" >
 }
 
@@ -757,7 +760,7 @@ boolean expr(String type):
     }
 }
 
-List<String> valuesList() :
+List<String> stringValuesList() :
 {
     Token t = null;
     List<String> values = new ArrayList<String>();
@@ -768,53 +771,71 @@ List<String> valuesList() :
     { return values; }
 }
 
-List<String> dateValuesList() :
+List<String> longValuesList() :
 {
     Token t = null;
     List<String> values = new ArrayList<String>();
 }
 {
-    (t = <DATE_STRING>)  { addValueToList(values, t);}
-    ( <COMMA> (t = <DATE_STRING>) { addValueToList(values, t); } )*
+    (t = <LONG_STRING>)  { addValueToList(values, t);}
+    ( <COMMA> (t = <LONG_STRING>) { addValueToList(values, t); } )*
     { return values; }
 }
 
-String propertyDataType() :
+List<String> doubleValuesList() :
 {
-   Token t;
+    Token t = null;
+    List<String> values = new ArrayList<String>();
 }
 {
-  ( t = <PROP_TYPE_STRING> | t = <PROP_TYPE_LONG> | t = <PROP_TYPE_DOUBLE> | t = <PROP_TYPE_BOOLEAN> )
-  {
-      return t.image;
-  }
+    (t = <DOUBLE_STRING>)  { addValueToList(values, t);}
+    ( <COMMA> (t = <DOUBLE_STRING>) { addValueToList(values, t); } )*
+    { return values; }
+}
 
+List<String> boolValuesList() :
+{
+    Token t = null;
+    List<String> values = new ArrayList<String>();
+}
+{
+    (t = <BOOLEAN_STRING>)  { addValueToList(values, t);}
+    ( <COMMA> (t = <BOOLEAN_STRING>) { addValueToList(values, t); } )*
+    { return values; }
 }
 
-String dateDataType() :
-{
-   Token t;
-}
-{
-  (t = <PROP_TYPE_DATE>)
-  {
-      return t.image;
-  }
-
-}
+List<String> dateValuesList() :
+ {
+     Token t = null;
+     List<String> values = new ArrayList<String>();
+ }
+ {
+     (t = <DATE_STRING>)  { addValueToList(values, t);}
+     ( <COMMA> (t = <DATE_STRING>) { addValueToList(values, t); } )*
+     { return values; }
+ }
 
 void propertyLine(List<PropertyLine> lines) :
 {
     Token name = null;
-    String type = null;
+    Token type = null;
+    String typeString = "String";
     List<String> values;
 }
 {
-    <SET> ( name = <STRING> | name = <NAMESPACED_ITEM>)  ((( <LCURLY> ( type = propertyDataType() ) <RCURLY> )? <TO>
-    values = valuesList()) | (( <LCURLY> ( type = dateDataType() ) <RCURLY> ) <TO>  values = dateValuesList()))
+    <SET> ( name = <STRING> | name = <NAMESPACED_ITEM> )  (
+    (( <LCURLY> ( type = <PROP_TYPE_LONG> ) <RCURLY> ) <TO>  values = longValuesList()) |
+    (( <LCURLY> ( type = <PROP_TYPE_DOUBLE> ) <RCURLY> ) <TO>  values = doubleValuesList()) |
+    (( <LCURLY> ( type = <PROP_TYPE_DATE> ) <RCURLY> ) <TO>  values = dateValuesList()) |
+    (( <LCURLY> ( type = <PROP_TYPE_BOOLEAN> ) <RCURLY> ) <TO>  values = boolValuesList()) |
+    (( <LCURLY> ( type = <PROP_TYPE_STRING> ) <RCURLY> )? <TO> values = stringValuesList()) )
+
     <EOL>
     {
-        lines.add(new PropertyLine(name.image,  type == null ? "String" : type, values));
+        if (type != null ) {
+            typeString = type.image;
+        }
+        lines.add(new PropertyLine(name.image, typeString, values));
     }
 }
 

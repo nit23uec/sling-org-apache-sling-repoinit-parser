@@ -116,6 +116,8 @@ public class ParsingErrorsTest {
             add(new Object[] { "set properties on /pathA/b  \n set smallcasetype{string} to abc \n end", ParseException.class });
             add(new Object[] { "set properties on /pathA/b  \n set {String} to missingPropertyName \n end", ParseException.class });
             add(new Object[] { "set properties on /pathA/b  \n set somepProp{String} withoutTo \n end", ParseException.class });
+            add(new Object[] { "set properties on /pathA/b  \n set someInteger{Long} to abc \n end", ParseException.class });
+            add(new Object[] { "set properties on /pathA/b  \n set someBool{Boolean} to 234 \n end", ParseException.class });
         }};
         return result;
     }
